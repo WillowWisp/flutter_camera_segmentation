@@ -45,6 +45,12 @@ class _MyAppState extends State<MyApp> {
               ? Text('Camera not initialized')
               : Texture(textureId: _cameraId!),
         ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            FlutterCameraSegmentation.startCamera();
+          },
+          child: Icon(Icons.camera),
+        ),
       ),
     );
   }

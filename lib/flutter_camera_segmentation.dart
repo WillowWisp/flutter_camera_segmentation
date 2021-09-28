@@ -14,4 +14,8 @@ class FlutterCameraSegmentation {
     final cameraId = await _channel.invokeMethod('createCamera');
     return cameraId;
   }
+
+  static Future<void> startCamera() async {
+    await _channel.invokeMethod('startCamera');
+  }
 }

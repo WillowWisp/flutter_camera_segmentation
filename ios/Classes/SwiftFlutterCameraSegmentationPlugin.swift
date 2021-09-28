@@ -5,6 +5,7 @@ import CoreML
 
 public class SwiftFlutterCameraSegmentationPlugin: NSObject, FlutterPlugin {
     var textureRegistry: FlutterTextureRegistry
+    var myCamera: MyCamera?
     
     init(textureRegistry: FlutterTextureRegistry) {
         self.textureRegistry = textureRegistry
@@ -30,12 +31,17 @@ public class SwiftFlutterCameraSegmentationPlugin: NSObject, FlutterPlugin {
             result("Deeplab loaded")
         }
         else if call.method == "createCamera" {
-            let myCamera = MyCamera()
-            myCamera.setupCamera(sessionPreset: .hd1280x720) { success in
-                myCamera.start()
+            myCamera = MyCamera()
+            if let myCamera = myCamera {
+                let cameraId = self.textureRegistry.register(myCamera)
+                myCamera.setupCamera(sessionPreset: .hd1920x1080) { success in
+//                    myCamera.setupMlModel()
+                    myCamera.start({
+                        self.textureRegistry.textureFrameAvailable(cameraId)
+                    })
+                }
+                result(cameraId)
             }
-            let cameraId = self.textureRegistry.register(myCamera)
-            result(cameraId)
         }
         else {
             result("Custom: Not implemented")

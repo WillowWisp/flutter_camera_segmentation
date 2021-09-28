@@ -7,17 +7,22 @@
 
 import Foundation
 import AVFoundation
+import Vision
+import CoreML
 
 class MyCamera: NSObject {
     let captureSession = AVCaptureSession()
     let videoOutput = AVCaptureVideoDataOutput()
     var pixelBuffer: CVPixelBuffer?
+    var onFrameAvailable: (() -> Void)?
+    
+    var request: VNCoreMLRequest?
     
     func setupCamera(sessionPreset: AVCaptureSession.Preset, position: AVCaptureDevice.Position? = .back, completion: @escaping (_ success: Bool) -> Void) {
         captureSession.beginConfiguration()
         captureSession.sessionPreset = sessionPreset
         
-        let queue = DispatchQueue(label: "com.tucan9389.camera-queue")
+        _ = DispatchQueue(label: "com.tucan9389.camera-queue")
         
         let device: AVCaptureDevice?
         if let position = position {
@@ -47,7 +52,7 @@ class MyCamera: NSObject {
         
         videoOutput.videoSettings = settings
         videoOutput.alwaysDiscardsLateVideoFrames = true
-        videoOutput.setSampleBufferDelegate(self, queue: queue)
+        videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue.main)
         if captureSession.canAddOutput(videoOutput) {
             captureSession.addOutput(videoOutput)
         }
@@ -61,9 +66,19 @@ class MyCamera: NSObject {
         completion(true)
     }
     
-    func start() {
+    func setupMlModel() {
+        let deepLab = try! DeepLabV3(configuration: MLModelConfiguration())
+        if let visionModel = try? VNCoreMLModel(for: deepLab.model) {
+            request = VNCoreMLRequest(model: visionModel, completionHandler: { req, err in
+                print(req.results ?? "No results")
+            })
+        }
+    }
+    
+    func start(_ onFrameAvailable: @escaping () -> Void) {
         if !captureSession.isRunning {
             captureSession.startRunning()
+            self.onFrameAvailable = onFrameAvailable
         }
     }
     
@@ -78,17 +93,24 @@ class MyCamera: NSObject {
 
 extension MyCamera: AVCaptureVideoDataOutputSampleBufferDelegate {
     public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        print("imageBuffer:")
-        print(sampleBuffer.imageBuffer ?? "Null")
-        pixelBuffer = sampleBuffer.imageBuffer
+        pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
+        if let onFrameAvailable = onFrameAvailable {
+            onFrameAvailable()
+        }
+        
+//        if let pixelBuffer = pixelBuffer, let request = request {
+//            let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, options: [:])
+//            try? handler.perform([request])
+//        }
     }
 }
 
 extension MyCamera: FlutterTexture {
     func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
         if let pixelBuffer = pixelBuffer {
-            return Unmanaged.passRetained(pixelBuffer)
+            return Unmanaged<CVPixelBuffer>.passRetained(pixelBuffer)
         }
+        
         return nil
     }
 }
