@@ -17,7 +17,17 @@ A new flutter plugin project.
   s.dependency 'Flutter'
   s.platform = :ios, '14.0'
 
+  s.ios.deployment_target = '14.0'
+  s.public_header_files = 'Classes/**/*.h'
+  # s.resources = 'Classes/deeplabv3_scripted.pt'
+  s.dependency 'LibTorch', '~>1.9.0'
+  s.static_framework = true
+
   # Flutter.framework does not contain a i386 slice.
-  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
+    'HEADER_SEARCH_PATHS' => '$(inherited) "${PODS_ROOT}/LibTorch/install/include"'
+  }
   s.swift_version = '5.0'
 end

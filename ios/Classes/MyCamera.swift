@@ -13,16 +13,25 @@ import CoreML
 class MyCamera: NSObject {
     let captureSession = AVCaptureSession()
     let videoOutput = AVCaptureVideoDataOutput()
+    let photoOutput = AVCapturePhotoOutput()
     var pixelBuffer: CVPixelBuffer?
     var onFrameAvailable: (() -> Void)?
     
-    var request: VNCoreMLRequest?
+    var flutterResult: FlutterResult?
+    
+    // private lazy var torchModule: TorchModule = {
+    //     let filePath = Bundle.main.path(forResource:
+    //                                         "deeplabv3_scripted", ofType: "pt")
+    //     if let filePath = filePath, let module = TorchModule(fileAtPath: filePath) {
+    //         return module
+    //     } else {
+    //         fatalError("Can't find the model file!")
+    //     }
+    // }()
     
     func setupCamera(sessionPreset: AVCaptureSession.Preset, position: AVCaptureDevice.Position? = .back, completion: @escaping (_ success: Bool) -> Void) {
         captureSession.beginConfiguration()
         captureSession.sessionPreset = sessionPreset
-        
-        _ = DispatchQueue(label: "com.tucan9389.camera-queue")
         
         let device: AVCaptureDevice?
         if let position = position {
@@ -52,7 +61,8 @@ class MyCamera: NSObject {
         
         videoOutput.videoSettings = settings
         videoOutput.alwaysDiscardsLateVideoFrames = true
-        videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue.main)
+        let queue = DispatchQueue(label: "com.tucan9389.camera-queue")
+        videoOutput.setSampleBufferDelegate(self, queue: queue)
         if captureSession.canAddOutput(videoOutput) {
             captureSession.addOutput(videoOutput)
         }
@@ -61,18 +71,18 @@ class MyCamera: NSObject {
         // rotated by 90 degrees. Need to set this _after_ addOutput()!
         videoOutput.connection(with: AVMediaType.video)?.videoOrientation = .portrait
         
+        if captureSession.canAddOutput(photoOutput) {
+            captureSession.addOutput(photoOutput)
+            
+            photoOutput.isHighResolutionCaptureEnabled = true
+            photoOutput.isLivePhotoCaptureEnabled = photoOutput.isLivePhotoCaptureSupported
+            
+            print("photoOutput added.")
+        }
+        
         captureSession.commitConfiguration()
         
         completion(true)
-    }
-    
-    func setupMlModel() {
-        let deepLab = try! DeepLabV3(configuration: MLModelConfiguration())
-        if let visionModel = try? VNCoreMLModel(for: deepLab.model) {
-            request = VNCoreMLRequest(model: visionModel, completionHandler: { req, err in
-                print(req.results ?? "No results")
-            })
-        }
     }
     
     func start(_ onFrameAvailable: @escaping () -> Void) {
@@ -87,6 +97,29 @@ class MyCamera: NSObject {
             captureSession.stopRunning()
         }
     }
+    
+    func capturePhoto(result: @escaping FlutterResult) {
+        let photoSettings = AVCapturePhotoSettings()
+        photoSettings.isHighResolutionPhotoEnabled = true
+        
+        if let firstAvailablePreviewPhotoPixelFormatTypes = photoSettings.availablePreviewPhotoPixelFormatTypes.first {
+            photoSettings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: firstAvailablePreviewPhotoPixelFormatTypes]
+        }
+        
+        flutterResult = result
+        
+        photoOutput.capturePhoto(with: photoSettings, delegate: self)
+    }
+}
+
+extension MyCamera: FlutterTexture {
+    func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
+        if let pixelBuffer = pixelBuffer {
+            return Unmanaged<CVPixelBuffer>.passRetained(pixelBuffer)
+        }
+        
+        return nil
+    }
 }
 
 // - MARK: VideoOutputBufferDelegate
@@ -98,19 +131,55 @@ extension MyCamera: AVCaptureVideoDataOutputSampleBufferDelegate {
             onFrameAvailable()
         }
         
-//        if let pixelBuffer = pixelBuffer, let request = request {
-//            let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, options: [:])
-//            try? handler.perform([request])
-//        }
+        // Test Segmentation
+        if let pixelBuffer = pixelBuffer {
+            CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.readOnly)
+            if let _ = CVPixelBufferGetBaseAddress(pixelBuffer) {
+                //                self.torchModule.segment(image: x, withWidth: 640, withHeight: 640)
+            }
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.readOnly)
+        }
     }
 }
 
-extension MyCamera: FlutterTexture {
-    func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
-        if let pixelBuffer = pixelBuffer {
-            return Unmanaged<CVPixelBuffer>.passRetained(pixelBuffer)
+extension MyCamera: AVCapturePhotoCaptureDelegate {
+//    func photoOutput(_ captureOutput: AVCapturePhotoOutput,
+//                     didFinishProcessingPhoto photoSampleBuffer: CMSampleBuffer?,
+//                     previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?,
+//                     resolvedSettings: AVCaptureResolvedPhotoSettings,
+//                     bracketSettings: AVCaptureBracketedStillImageSettings?,
+//                     error: Error?) {
+//
+//        if let error = error {
+//            print("Error capturing photo: \(error)")
+//        } else {
+//            if let sampleBuffer = photoSampleBuffer,
+//               let previewBuffer = previewPhotoSampleBuffer,
+//               let dataImage = AVCapturePhotoOutput.jpegPhotoDataRepresentation(
+//                forJPEGSampleBuffer: sampleBuffer,
+//                previewPhotoSampleBuffer: previewBuffer
+//               ) {
+//
+//                print("Old photoOutput")
+//                print(dataImage.count)
+//
+//            }
+//        }
+//    }
+    
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        
+        guard let flutterResult = flutterResult else {
+            return
         }
         
-        return nil
+        guard let data = photo.fileDataRepresentation() else {
+            flutterResult(nil)
+            return
+        }
+        
+        let a = [UInt8](data)
+        
+        flutterResult(a)
     }
 }

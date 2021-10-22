@@ -1,6 +1,8 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_camera_segmentation/flutter_camera_segmentation.dart';
@@ -18,6 +20,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   int? _cameraId;
+  Uint8List? _capturedPhotoBytes;
 
   @override
   void initState() {
@@ -26,6 +29,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> initCamera() async {
+    await FlutterCameraSegmentation.testDeepLab();
     final cameraId = await FlutterCameraSegmentation.createCamera();
 
     setState(() {
@@ -41,13 +45,24 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Plugin example app'),
         ),
         body: Center(
-          child: _cameraId == null
-              ? Text('Camera not initialized')
-              : Texture(textureId: _cameraId!),
+          child: _capturedPhotoBytes == null
+              ? _cameraId == null
+                  ? Text('Camera not initialized')
+                  : Texture(textureId: _cameraId!)
+              : Image.memory(_capturedPhotoBytes!),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            FlutterCameraSegmentation.startCamera();
+          onPressed: () async {
+            final bytes = await FlutterCameraSegmentation.capturePhoto();
+            if (bytes != null) {
+              setState(() {
+                _capturedPhotoBytes = bytes;
+              });
+              final String base64Str = base64Encode(bytes);
+              print(base64Str);
+            } else {
+              print('bytes is null');
+            }
           },
           child: Icon(Icons.camera),
         ),

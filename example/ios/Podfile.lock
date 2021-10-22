@@ -2,10 +2,20 @@ PODS:
   - Flutter (1.0.0)
   - flutter_camera_segmentation (0.0.1):
     - Flutter
+    - LibTorch (~> 1.9.0)
+  - LibTorch (1.9.0):
+    - LibTorch/Core (= 1.9.0)
+  - LibTorch/Core (1.9.0):
+    - LibTorch/Torch
+  - LibTorch/Torch (1.9.0)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_camera_segmentation (from `.symlinks/plugins/flutter_camera_segmentation/ios`)
+
+SPEC REPOS:
+  trunk:
+    - LibTorch
 
 EXTERNAL SOURCES:
   Flutter:
@@ -15,8 +25,9 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: 50d75fe2f02b26cc09d224853bb45737f8b3214a
-  flutter_camera_segmentation: ad6fcb542cceb366e7146665a59db8afe152cee2
+  flutter_camera_segmentation: 6b6298f9c4b76b9612e0cdbdee486402dc61fe6d
+  LibTorch: d89f452b8b932002bd98884b3921850a95c35e14
 
-PODFILE CHECKSUM: aafe91acc616949ddb318b77800a7f51bffa2a4c
+PODFILE CHECKSUM: fe5e039928e08cc3aa55730590fe5577354d32d2
 
 COCOAPODS: 1.11.2

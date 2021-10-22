@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
@@ -17,5 +18,14 @@ class FlutterCameraSegmentation {
 
   static Future<void> startCamera() async {
     await _channel.invokeMethod('startCamera');
+  }
+
+  static Future<Uint8List?> capturePhoto() async {
+    final bytes = await _channel.invokeListMethod<int>('capturePhoto');
+    if (bytes == null) {
+      return null;
+    }
+
+    return Uint8List.fromList(bytes);
   }
 }

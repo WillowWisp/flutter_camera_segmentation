@@ -21,13 +21,6 @@ public class SwiftFlutterCameraSegmentationPlugin: NSObject, FlutterPlugin {
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if call.method == "testDeepLab" {
-            let deepLab = try! DeepLabV3(configuration: MLModelConfiguration())
-            if let safeVisionModel = try? VNCoreMLModel(for: deepLab.model) {
-                let visionModel = safeVisionModel
-                _ = VNCoreMLRequest(model: visionModel, completionHandler: { req, err in
-                    print(req.results ?? "No results")
-                })
-            }
             result("Deeplab loaded")
         }
         else if call.method == "createCamera" {
@@ -35,12 +28,16 @@ public class SwiftFlutterCameraSegmentationPlugin: NSObject, FlutterPlugin {
             if let myCamera = myCamera {
                 let cameraId = self.textureRegistry.register(myCamera)
                 myCamera.setupCamera(sessionPreset: .hd1920x1080) { success in
-//                    myCamera.setupMlModel()
                     myCamera.start({
                         self.textureRegistry.textureFrameAvailable(cameraId)
                     })
                 }
                 result(cameraId)
+            }
+        }
+        else if call.method == "capturePhoto" {
+            if let myCamera = myCamera {
+                myCamera.capturePhoto(result: result)
             }
         }
         else {
