@@ -71,11 +71,9 @@ class MyCamera: NSObject {
         // rotated by 90 degrees. Need to set this _after_ addOutput()!
         videoOutput.connection(with: AVMediaType.video)?.videoOrientation = .portrait
         
+        photoOutput.isLivePhotoCaptureEnabled = photoOutput.isLivePhotoCaptureSupported
         if captureSession.canAddOutput(photoOutput) {
             captureSession.addOutput(photoOutput)
-            
-            photoOutput.isHighResolutionCaptureEnabled = true
-            photoOutput.isLivePhotoCaptureEnabled = photoOutput.isLivePhotoCaptureSupported
             
             print("photoOutput added.")
         }
@@ -100,7 +98,7 @@ class MyCamera: NSObject {
     
     func capturePhoto(result: @escaping FlutterResult) {
         let photoSettings = AVCapturePhotoSettings()
-        photoSettings.isHighResolutionPhotoEnabled = true
+        photoSettings.isHighResolutionPhotoEnabled = false
         
         if let firstAvailablePreviewPhotoPixelFormatTypes = photoSettings.availablePreviewPhotoPixelFormatTypes.first {
             photoSettings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: firstAvailablePreviewPhotoPixelFormatTypes]
@@ -179,6 +177,7 @@ extension MyCamera: AVCapturePhotoCaptureDelegate {
         }
         
         let a = [UInt8](data)
+        print(a.count)
         
         flutterResult(a)
     }

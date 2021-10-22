@@ -58,8 +58,7 @@ class _MyAppState extends State<MyApp> {
               setState(() {
                 _capturedPhotoBytes = bytes;
               });
-              final String base64Str = base64Encode(bytes);
-              print(base64Str);
+              print('base64Str');
             } else {
               print('bytes is null');
             }
