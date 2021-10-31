@@ -7,17 +7,13 @@ class FlutterCameraSegmentation {
   static const MethodChannel _channel =
       MethodChannel('flutter_camera_segmentation');
 
-  static Future<String?> testDeepLab() async {
-    await _channel.invokeMethod('testDeepLab');
-  }
-
   static Future<int> createCamera() async {
-    final cameraId = await _channel.invokeMethod('createCamera');
+    final cameraId = await _channel.invokeMethod('createCamera') as int;
     return cameraId;
   }
 
-  static Future<void> startCamera() async {
-    await _channel.invokeMethod('startCamera');
+  static Future<void> disposeCamera() async {
+    await _channel.invokeMethod('disposeCamera');
   }
 
   static Future<Uint8List?> capturePhoto() async {

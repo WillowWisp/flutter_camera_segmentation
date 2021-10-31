@@ -1,7 +1,6 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -18,23 +17,50 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   int? _cameraId;
   Uint8List? _capturedPhotoBytes;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance?.addObserver(this);
+
     initCamera();
   }
 
+  @override
+  void dispose() {
+    disposeCamera();
+
+    WidgetsBinding.instance?.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      initCamera();
+    } else if (state == AppLifecycleState.paused) {
+      disposeCamera();
+    }
+  }
+
   Future<void> initCamera() async {
-    await FlutterCameraSegmentation.testDeepLab();
     final cameraId = await FlutterCameraSegmentation.createCamera();
 
     setState(() {
       _cameraId = cameraId;
     });
+  }
+
+  Future<void> disposeCamera() async {
+    setState(() {
+      _cameraId = null;
+    });
+
+    await FlutterCameraSegmentation.disposeCamera();
   }
 
   @override
@@ -58,9 +84,6 @@ class _MyAppState extends State<MyApp> {
               setState(() {
                 _capturedPhotoBytes = bytes;
               });
-              print('base64Str');
-            } else {
-              print('bytes is null');
             }
           },
           child: Icon(Icons.camera),

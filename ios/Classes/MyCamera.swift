@@ -59,9 +59,11 @@ class MyCamera: NSObject {
             kCVPixelBufferPixelFormatTypeKey as String: NSNumber(value: kCVPixelFormatType_32BGRA),
         ]
         
+        // * Add video output (for image stream listener)
+        
         videoOutput.videoSettings = settings
         videoOutput.alwaysDiscardsLateVideoFrames = true
-        let queue = DispatchQueue(label: "com.tucan9389.camera-queue")
+        let queue = DispatchQueue(label: "com.willow614.camera-queue")
         videoOutput.setSampleBufferDelegate(self, queue: queue)
         if captureSession.canAddOutput(videoOutput) {
             captureSession.addOutput(videoOutput)
@@ -71,11 +73,11 @@ class MyCamera: NSObject {
         // rotated by 90 degrees. Need to set this _after_ addOutput()!
         videoOutput.connection(with: AVMediaType.video)?.videoOrientation = .portrait
         
+        // * Add photo output (for taking picture)
+        
         photoOutput.isLivePhotoCaptureEnabled = photoOutput.isLivePhotoCaptureSupported
         if captureSession.canAddOutput(photoOutput) {
             captureSession.addOutput(photoOutput)
-            
-            print("photoOutput added.")
         }
         
         captureSession.commitConfiguration()
@@ -107,6 +109,16 @@ class MyCamera: NSObject {
         flutterResult = result
         
         photoOutput.capturePhoto(with: photoSettings, delegate: self)
+    }
+    
+    func close() {
+        captureSession.stopRunning()
+        for captureInput in captureSession.inputs {
+            captureSession.removeInput(captureInput)
+        }
+        for captureOutput in captureSession.outputs {
+            captureSession.removeOutput(captureOutput)
+        }
     }
 }
 

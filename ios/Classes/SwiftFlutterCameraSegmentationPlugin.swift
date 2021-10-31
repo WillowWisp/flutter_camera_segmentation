@@ -6,6 +6,7 @@ import CoreML
 public class SwiftFlutterCameraSegmentationPlugin: NSObject, FlutterPlugin {
     var textureRegistry: FlutterTextureRegistry
     var myCamera: MyCamera?
+    var cameraTextureId: Int64?
     
     init(textureRegistry: FlutterTextureRegistry) {
         self.textureRegistry = textureRegistry
@@ -20,20 +21,28 @@ public class SwiftFlutterCameraSegmentationPlugin: NSObject, FlutterPlugin {
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if call.method == "testDeepLab" {
-            result("Deeplab loaded")
-        }
-        else if call.method == "createCamera" {
+        if call.method == "createCamera" {
             myCamera = MyCamera()
             if let myCamera = myCamera {
-                let cameraId = self.textureRegistry.register(myCamera)
+                cameraTextureId = textureRegistry.register(myCamera)
+                guard let cameraTextureId = cameraTextureId else {
+                    return
+                }
+                
                 myCamera.setupCamera(sessionPreset: .hd1920x1080) { success in
-                    myCamera.start({
-                        self.textureRegistry.textureFrameAvailable(cameraId)
+                    myCamera.start({ [self] in
+                        textureRegistry.textureFrameAvailable(cameraTextureId)
                     })
                 }
-                result(cameraId)
+                result(cameraTextureId)
             }
+        }
+        else if call.method == "disposeCamera" {
+            if let myCamera = myCamera, let cameraTextureId = cameraTextureId {
+                textureRegistry.unregisterTexture(cameraTextureId)
+                myCamera.close()
+            }
+            result(nil)
         }
         else if call.method == "capturePhoto" {
             if let myCamera = myCamera {
